@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Enrollment Form</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f7f8;
+            margin: 0;
+            padding: 0;
+        }
+
+        h2 {
+            text-align: center;
+            padding: 20px;
+            color: #333;
+        }
+
+        form {
+            max-width: 500px;
+            margin: 20px auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #444;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            transition: border 0.3s;
+        }
+
+        input:focus {
+            border-color: #007BFF;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        #saveBtn {
+            background: #28a745;
+            color: white;
+        }
+
+        #saveBtn:hover {
+            background: #218838;
+        }
+
+        #updateBtn {
+            background: #ffc107;
+            color: black;
+        }
+
+        #updateBtn:hover {
+            background: #e0a800;
+        }
+
+        #resetBtn {
+            background: #dc3545;
+            color: white;
+        }
+
+        #resetBtn:hover {
+            background: #c82333;
+        }
+
+        .button-group {
+            text-align: center;
+        }
+    </style>
+
+    <script>
+        const baseUrl = "http://api.login2explore.com:5577";
+        const irl = "/api/irl";   
+        const iml = "/api/iml";   
+        const dbName = "SCHOOL-DB";
+        const relationName = "STUDENT-TABLE";
+        const token = "90934849|-31949263831784650|90957952"; 
+
+        function resetForm() {
+            document.getElementById("studentForm").reset();
+            disableFields();
+            document.getElementById("rollNo").disabled = false;
+            document.getElementById("rollNo").focus();
+        }
+
+        function disableFields() {
+            let fields = ["fullName", "class", "birthDate", "address", "enrollmentDate"];
+            fields.forEach(f => document.getElementById(f).disabled = true);
+            document.getElementById("saveBtn").disabled = true;
+            document.getElementById("updateBtn").disabled = true;
+            document.getElementById("resetBtn").disabled = true;
+        }
+
+        function enableFields() {
+            let fields = ["fullName", "class", "birthDate", "address", "enrollmentDate"];
+            fields.forEach(f => document.getElementById(f).disabled = false);
+        }
+
+        function checkRollNo() {
+            let rollNo = document.getElementById("rollNo").value;
+            if (rollNo === "") return;
+
+            let req = {
+                token: token,
+                dbName: dbName,
+                rel: relationName,
+                cmd: "GET_BY_KEY",
+                key: rollNo
+            };
+
+            $.ajax({
+                url: baseUrl + irl,
+                type: "POST",
+                data: JSON.stringify(req),
+                contentType: "application/json",
+                success: function(result) {
+                    console.log("Response:", result);
+                    if (result.status === 200) {
+                        let student = JSON.parse(result.data).record;
+                        document.getElementById("fullName").value = student["Full-Name"];
+                        document.getElementById("class").value = student["Class"];
+                        document.getElementById("birthDate").value = student["Birth-Date"];
+                        document.getElementById("address").value = student["Address"];
+                        document.getElementById("enrollmentDate").value = student["Enrollment-Date"];
+
+                        enableFields();
+                        document.getElementById("rollNo").disabled = true;
+                        document.getElementById("updateBtn").disabled = false;
+                        document.getElementById("resetBtn").disabled = false;
+                    } else {
+                        enableFields();
+                        document.getElementById("saveBtn").disabled = false;
+                        document.getElementById("resetBtn").disabled = false;
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX error:", status, error);
+                    alert("Error connecting to JPDB. Check console for details.");
+                }
+            });
+        }
+
+        function validate(student) {
+            for (let key in student) {
+                if (student[key] === "") {
+                    alert("All fields must be filled!");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function saveData() {
+            let rollNo = document.getElementById("rollNo").value;
+            let student = {
+                "Roll-No": rollNo,
+                "Full-Name": document.getElementById("fullName").value,
+                "Class": document.getElementById("class").value,
+                "Birth-Date": document.getElementById("birthDate").value,
+                "Address": document.getElementById("address").value,
+                "Enrollment-Date": document.getElementById("enrollmentDate").value
+            };
+
+            if (!validate(student)) return;
+
+            let req = {
+                token: token,
+                dbName: dbName,
+                rel: relationName,
+                cmd: "PUT",
+                jsonStr: JSON.stringify(student)
+            };
+
+            $.ajax({
+                url: baseUrl + iml,
+                type: "POST",
+                data: JSON.stringify(req),
+                contentType: "application/json",
+                success: function(result) {
+                    alert("Data saved successfully!");
+                    resetForm();
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX error:", status, error);
+                    alert("Save failed. Check console for details.");
+                }
+            });
+        }
+
+        function updateData() {
+            let rollNo = document.getElementById("rollNo").value;
+            let student = {
+                "Roll-No": rollNo,
+                "Full-Name": document.getElementById("fullName").value,
+                "Class": document.getElementById("class").value,
+                "Birth-Date": document.getElementById("birthDate").value,
+                "Address": document.getElementById("address").value,
+                "Enrollment-Date": document.getElementById("enrollmentDate").value
+            };
+
+            if (!validate(student)) return;
+
+            let req = {
+                token: token,
+                dbName: dbName,
+                rel: relationName,
+                cmd: "UPDATE",
+                jsonStr: JSON.stringify(student)
+            };
+
+            $.ajax({
+                url: baseUrl + iml,
+                type: "POST",
+                data: JSON.stringify(req),
+                contentType: "application/json",
+                success: function(result) {
+                    alert("Data updated successfully!");
+                    resetForm();
+                },
+                error: function(xhr, status, error) {
+                    console.error("AJAX error:", status, error);
+                    alert("Update failed. Check console for details.");
+                }
+            });
+        }
+
+        window.onload = resetForm;
+    </script>
+</head>
+<body>
+    <h2>Student Enrollment Form</h2>
+    <form id="studentForm">
+        Roll No: <input type="text" id="rollNo" onblur="checkRollNo()"><br><br>
+        Full Name: <input type="text" id="fullName"><br><br>
+        Class: <input type="text" id="class"><br><br>
+        Birth Date: <input type="date" id="birthDate"><br><br>
+        Address: <input type="text" id="address"><br><br>
+        Enrollment Date: <input type="date" id="enrollmentDate"><br><br>
+
+        <button type="button" id="saveBtn" onclick="saveData()">Save</button>
+        <button type="button" id="updateBtn" onclick="updateData()">Update</button>
+        <button type="button" id="resetBtn" onclick="resetForm()">Reset</button>
+    </form>
+</body>
+</html>
